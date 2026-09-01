@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PCL Auction 2026</title>
+<style>
+  :root{
+    --ink:#0d1420;
+    --panel:#131d2f;
+    --panel-2:#1a2842;
+    --line:#2a3a5a;
+    --gold:#e0a83e;
+    --gold-dim:#a97f2e;
+    --green:#3fa66b;
+    --red:#c85a4f;
+    --text:#eef1f6;
+    --text-dim:#8fa0bd;
+    --court:#0a3d2e;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--ink);color:var(--text);
+    font-family:'Segoe UI',Arial,sans-serif;overflow:hidden;}
+  .nametype{font-family:Georgia,'Times New Roman',serif;}
+
+  #app{width:100%;height:100%;position:relative;}
+  .page{position:absolute;inset:0;display:none;flex-direction:column;}
+  .page.active{display:flex;}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 28px;background:var(--panel);border-bottom:1px solid var(--line);
+    flex:0 0 auto;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--gold);}
+  .brand h1{font-size:18px;letter-spacing:.5px;margin:0;font-weight:600;}
+  .brand h1 span{color:var(--gold);}
+  .nav-links{display:flex;gap:6px;}
+  .nav-btn{
+    background:transparent;border:1px solid var(--line);color:var(--text-dim);
+    padding:7px 16px;border-radius:6px;cursor:pointer;font-size:13px;transition:.15s;
+  }
+  .nav-btn:hover{border-color:var(--gold-dim);color:var(--text);}
+  .nav-btn.on{background:var(--gold);color:#1a1204;border-color:var(--gold);font-weight:600;}
+
+  /* ============ PAGE 1 : AUCTION ============ */
+  #page-auction{background:
+    radial-gradient(ellipse at 50% -10%, #1c2c4a 0%, var(--ink) 60%);}
+  .auction-wrap{flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;padding:18px 20px;gap:18px;min-height:0;}
+
+  .prog{color:var(--text-dim);font-size:13px;letter-spacing:1px;}
+  .prog b{color:var(--gold);}
+
+  .card{
+    width:min(360px,90vw);background:var(--panel);border:1px solid var(--line);
+    border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5);
+    position:relative;
+  }
+  .card-status{
+    position:absolute;top:12px;right:12px;padding:4px 10px;border-radius:20px;
+    font-size:11px;font-weight:700;letter-spacing:.5px;display:none;z-index:3;
+  }
+  .card-status.sold{display:block;background:var(--green);color:#08210f;}
+
+  .photo-wrap{position:relative;width:100%;aspect-ratio:4/5;background:#0a1120;
+    overflow:hidden;}
+  .photo-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
+  .photo-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+    color:var(--text-dim);font-size:13px;text-align:center;padding:20px;}
+
+  .crop-btn{
+    position:absolute;bottom:10px;right:10px;background:rgba(13,20,32,.85);
+    border:1px solid var(--gold-dim);color:var(--gold);padding:6px 12px;
+    border-radius:6px;font-size:12px;cursor:pointer;z-index:3;
+  }
+  .crop-btn:hover{background:var(--gold);color:#1a1204;}
+
+  .card-body{padding:18px 20px 22px;text-align:center;}
+  .p-name{font-size:24px;font-weight:700;margin:0 0 4px;}
+  .p-role{color:var(--gold);font-size:13px;letter-spacing:1.5px;text-transform:uppercase;
+    margin:0 0 2px;font-weight:600;}
+  .p-panch{color:var(--text-dim);font-size:13px;margin:0;}
+
+  .assign-line{margin-top:10px;font-size:13px;color:var(--text-dim);min-height:18px;}
+  .assign-line b{color:var(--green);}
+
+  .team-grid{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:9px;width:min(560px,92vw);
+  }
+  .team-pick{
+    background:var(--panel-2);border:1.5px solid var(--line);color:var(--text);
+    padding:11px 6px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;
+    text-align:center;transition:.12s;user-select:none;
+  }
+  .team-pick:hover{border-color:var(--gold-dim);transform:translateY(-1px);}
+  .team-pick.picked{background:var(--gold);color:#1a1204;border-color:var(--gold);}
+
+  .hint{color:var(--text-dim);font-size:12px;text-align:center;max-width:520px;}
+  .hint kbd{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;
+    padding:1px 6px;font-size:11px;}
+
+  /* crop overlay */
+  .crop-overlay{position:fixed;inset:0;background:rgba(5,8,14,.88);
+    display:none;align-items:center;justify-content:center;z-index:50;flex-direction:column;gap:14px;}
+  .crop-overlay.active{display:flex;}
+  .crop-stage{position:relative;width:min(480px,88vw);aspect-ratio:1/1;background:#000;
+    overflow:hidden;border-radius:8px;cursor:move;touch-action:none;}
+  .crop-stage img{position:absolute;top:0;left:0;max-width:none;user-select:none;pointer-events:none;}
+  .crop-controls{display:flex;gap:10px;align-items:center;color:var(--text-dim);font-size:13px;}
+  .crop-controls input[type=range]{width:160px;}
+  .crop-actions{display:flex;gap:10px;}
+  .btn{background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    padding:9px 18px;border-radius:7px;cursor:pointer;font-size:13px;}
+  .btn.primary{background:var(--gold);color:#1a1204;border-color:var(--gold);font-weight:700;}
+  .btn:hover{opacity:.85;}
+
+  /* ============ PAGE 2 : OWNERS ============ */
+  #page-owners{background:var(--ink);}
+  .owners-wrap{flex:1;overflow-y:auto;padding:36px 40px;}
+  .owners-title{text-align:center;margin-bottom:30px;}
+  .owners-title h2{font-size:28px;margin:0;letter-spacing:.5px;}
+  .owners-title p{color:var(--text-dim);font-size:13px;margin:6px 0 0;}
+  .owners-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:20px;max-width:1100px;margin:0 auto;
+  }
+  .owner-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:18px;text-align:center;cursor:pointer;transition:.15s;
+  }
+  .owner-card:hover{border-color:var(--gold);transform:translateY(-3px);
+    box-shadow:0 12px 30px rgba(0,0,0,.4);}
+  .owner-photo{width:96px;height:96px;border-radius:50%;overflow:hidden;
+    margin:0 auto 12px;background:#0a1120;border:2px solid var(--gold-dim);}
+  .owner-photo img{width:100%;height:100%;object-fit:cover;}
+  .owner-photo .photo-ph{font-size:11px;}
+  .owner-team{font-weight:700;font-size:16px;margin:0 0 3px;}
+  .owner-name{color:var(--gold);font-size:12.5px;margin:0 0 8px;letter-spacing:.5px;}
+  .owner-count{color:var(--text-dim);font-size:11.5px;}
+
+  /* ============ PAGE 3 : ROSTER ============ */
+  #page-roster{background:var(--ink);}
+  .roster-head{padding:26px 40px 10px;text-align:center;position:relative;}
+  .back-btn{position:absolute;left:28px;top:24px;background:var(--panel-2);
+    border:1px solid var(--line);color:var(--text);padding:8px 14px;border-radius:7px;
+    cursor:pointer;font-size:13px;}
+  .roster-head h2{font-size:30px;margin:0 0 14px;letter-spacing:.5px;}
+  .owner-strip{display:flex;align-items:center;justify-content:center;gap:14px;}
+  .owner-strip .owner-photo{width:60px;height:60px;margin:0;}
+  .owner-strip .owner-name-lg{font-size:15px;font-weight:700;}
+  .owner-strip .owner-sub{color:var(--text-dim);font-size:12px;}
+
+  .roster-grid{flex:1;overflow-y:auto;padding:20px 40px 40px;
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:16px;max-width:1100px;margin:0 auto;width:100%;}
+  .roster-player{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    overflow:hidden;}
+  .roster-player .photo-wrap{aspect-ratio:4/5;}
+  .roster-player .info{padding:10px 12px 12px;}
+  .roster-player .rp-name{font-weight:700;font-size:14px;margin:0 0 2px;}
+  .roster-player .rp-role{color:var(--gold);font-size:11px;text-transform:uppercase;
+    letter-spacing:.5px;margin:0;}
+  .roster-empty{color:var(--text-dim);text-align:center;grid-column:1/-1;padding:40px;}
+
+  ::-webkit-scrollbar{width:9px;}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px;}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============ PAGE 1: AUCTION ============ -->
+  <div class="page active" id="page-auction">
+    <div class="topbar">
+      <div class="brand"><span class="dot"></span><h1>AUCTION <span>· PCL 2026</span></h1></div>
+      <div class="nav-links">
+        <button class="nav-btn on" data-goto="auction">Auction</button>
+        <button class="nav-btn" data-goto="owners">Teams</button>
+      </div>
+    </div>
+
+    <div class="auction-wrap">
+      <div class="prog">PLAYER <b id="progNum">1</b> / <span id="progTotal">4</span></div>
+
+      <div class="card">
+        <div class="card-status" id="cardStatus">SOLD</div>
+        <div class="photo-wrap" id="playerPhotoWrap">
+          <div class="photo-ph">Image of a player</div>
+          <button class="crop-btn" id="cropBtn" title="Crop this player's photo">✂ Crop</button>
+        </div>
+        <div class="card-body">
+          <p class="p-name nametype" id="pName">Player Name</p>
+          <p class="p-role" id="pRole">Role</p>
+          <p class="p-panch" id="pPanch">Panchayat</p>
+          <div class="assign-line" id="assignLine"></div>
+        </div>
+      </div>
+
+      <div class="team-grid" id="teamGrid"></div>
+
+      <div class="hint">
+        Click a team to <b>sell</b> the player to that team &nbsp;·&nbsp; click the same team
+        again (or double‑click) to <b>unsell</b> &nbsp;·&nbsp;
+        use <kbd>←</kbd> <kbd>→</kbd> to move between players
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PAGE 2: OWNERS ============ -->
+  <div class="page" id="page-owners">
+    <div class="topbar">
+      <div class="brand"><span class="dot"></span><h1>AUCTION <span>· PCL 2026</span></h1></div>
+      <div class="nav-links">
+        <button class="nav-btn" data-goto="auction">Auction</button>
+        <button class="nav-btn on" data-goto="owners">Teams</button>
+      </div>
+    </div>
+    <div class="owners-wrap">
+      <div class="owners-title">
+        <h2>Team Owners</h2>
+        <p>Click a team to view its full squad</p>
+      </div>
+      <div class="owners-grid" id="ownersGrid"></div>
+    </div>
+  </div>
+
+  <!-- ============ PAGE 3: ROSTER ============ -->
+  <div class="page" id="page-roster">
+    <div class="roster-head">
+      <button class="back-btn" id="rosterBack">← Teams</button>
+      <h2 id="rosterTeamName">TEAM NAME</h2>
+      <div class="owner-strip">
+        <div class="owner-photo" id="rosterOwnerPhoto"></div>
+        <div>
+          <div class="owner-name-lg" id="rosterOwnerName">Owner Name</div>
+          <div class="owner-sub" id="rosterOwnerSub">Owner</div>
+        </div>
+      </div>
+    </div>
+    <div class="roster-grid" id="rosterGrid"></div>
+  </div>
+
+</div>
+
+<!-- ============ CROP OVERLAY ============ -->
+<div class="crop-overlay" id="cropOverlay">
+  <div class="crop-stage" id="cropStage"><img id="cropImg" src=""></div>
+  <div class="crop-controls">
+    Zoom <input type="range" id="cropZoom" min="100" max="300" value="100">
+  </div>
+  <div class="crop-actions">
+    <button class="btn" id="cropCancel">Cancel</button>
+    <button class="btn primary" id="cropSave">Save crop</button>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   PCL AUCTION 2026 — DATA MODEL
+   ---------------------------------------------------------------------
+   Everything the page renders comes from the two arrays below:
+   TEAMS and PLAYERS. Extend these to the full 8 teams / 96 players —
+   the UI (all 3 pages, selection logic, crop tool) needs no changes.
+
+   TEAM OBJECT:
+   {
+     id:    "t1",              // unique id, used to link players -> team
+     name:  "TEAM KING 24",    // shown on team button + roster header
+     owner: "Rahul Lodhi",     // owner's name
+     ownerImg: "" | "data:..." // owner photo URL/base64, "" = placeholder
+   }
+
+   PLAYER OBJECT:
+   {
+     id:    "p1",               // unique id
+     name:  "Player One",
+     role:  "Batsman",          // Batsman / Bowler / All-rounder / WK etc.
+     panchayat: "Rau",          // village / panchayat field from your sketch
+     img:   "" | "data:..."     // player photo URL/base64, "" = placeholder
+   }
+
+   To add a real player photo, either:
+     a) set img to a URL:  img: "https://.../photo.jpg"
+     b) or paste a base64 string (data:image/jpeg;base64,....)
+   Same for team.ownerImg.
+
+   The assignment of player -> team is kept separately in `assignments`
+   (an object {playerId: teamId}) so you never have to edit player
+   objects during the auction itself — clicking a team button is what
+   writes into `assignments`.
+   ===================================================================== */
+
+const TEAMS = [
+  { id:"t1", name:"TEAM KING 24", owner:"Rahul Lodhi", ownerImg:"" },
+  { id:"t2", name:"TEAM 2",       owner:"Owner Name 2", ownerImg:"" },
+  { id:"t3", name:"TEAM 3",       owner:"Owner Name 3", ownerImg:"" },
+  { id:"t4", name:"TEAM 4",       owner:"Owner Name 4", ownerImg:"" },
+  { id:"t5", name:"TEAM 5",       owner:"Owner Name 5", ownerImg:"" },
+  { id:"t6", name:"TEAM 6",       owner:"Owner Name 6", ownerImg:"" },
+  { id:"t7", name:"TEAM 7",       owner:"Owner Name 7", ownerImg:"" },
+  { id:"t8", name:"TEAM 8",       owner:"Owner Name 8", ownerImg:"" },
+];
+
+// Sample of 4 players — copy this pattern for all 96.
+const PLAYERS = [
+  { id:"p1", name:"Amit Sharma",  role:"Batsman",       panchayat:"Rau",       img:"" },
+  { id:"p2", name:"Vikram Singh", role:"Bowler",         panchayat:"Mhow",      img:"" },
+  { id:"p3", name:"Rohit Patel",  role:"All-Rounder",    panchayat:"Depalpur",  img:"" },
+  { id:"p4", name:"Suresh Yadav", role:"Wicket Keeper",  panchayat:"Sanwer",    img:"" },
+];
+
+// Loaded from localStorage-free in-memory state (per session only,
+// as required — no browser storage is used).
+let assignments = {};      // { playerId: teamId }
+let cropTargetPlayerId = null;
+let cropState = { scale:1, x:0, y:0, dragging:false, startX:0, startY:0 };
+
+/* =====================================================================
+   PAGE NAVIGATION
+   ===================================================================== */
+function goTo(pageName){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+pageName).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    b.classList.toggle('on', b.dataset.goto === pageName);
+  });
+}
+document.querySelectorAll('[data-goto]').forEach(b=>{
+  b.addEventListener('click', ()=>goTo(b.dataset.goto));
+});
+document.getElementById('rosterBack').addEventListener('click', ()=>goTo('owners'));
+
+/* =====================================================================
+   PAGE 1 — AUCTION BOARD
+   ===================================================================== */
+let currentIndex = 0;
+
+function renderTeamGrid(){
+  const grid = document.getElementById('teamGrid');
+  grid.innerHTML = '';
+  TEAMS.forEach(team=>{
+    const btn = document.createElement('div');
+    btn.className = 'team-pick';
+    btn.textContent = team.name;
+    btn.dataset.teamId = team.id;
+    btn.addEventListener('click', ()=>handleTeamPick(team.id));
+    grid.appendChild(btn);
+  });
+}
+
+function handleTeamPick(teamId){
+  const player = PLAYERS[currentIndex];
+  if(assignments[player.id] === teamId){
+    // clicking the already-picked team again => unselect
+    delete assignments[player.id];
+  } else {
+    assignments[player.id] = teamId;
+  }
+  renderPlayer();
+}
+
+function renderPlayer(){
+  const player = PLAYERS[currentIndex];
+  document.getElementById('progNum').textContent = currentIndex + 1;
+  document.getElementById('progTotal').textContent = PLAYERS.length;
+
+  document.getElementById('pName').textContent = player.name;
+  document.getElementById('pRole').textContent = player.role;
+  document.getElementById('pPanch').textContent = player.panchayat;
+
+  const photoWrap = document.getElementById('playerPhotoWrap');
+  photoWrap.querySelectorAll('img,.photo-ph').forEach(el=>el.remove());
+  if(player.img){
+    const img = document.createElement('img');
+    img.src = player.img;
+    photoWrap.prepend(img);
+  } else {
+    const ph = document.createElement('div');
+    ph.className = 'photo-ph';
+    ph.textContent = 'Image of a player';
+    photoWrap.prepend(ph);
+  }
+
+  // team button highlight
+  document.querySelectorAll('.team-pick').forEach(btn=>{
+    btn.classList.toggle('picked', assignments[player.id] === btn.dataset.teamId);
+  });
+
+  // sold status + assign line
+  const soldTeamId = assignments[player.id];
+  const statusEl = document.getElementById('cardStatus');
+  const lineEl = document.getElementById('assignLine');
+  if(soldTeamId){
+    const team = TEAMS.find(t=>t.id===soldTeamId);
+    statusEl.classList.add('sold');
+    statusEl.textContent = 'SOLD';
+    lineEl.innerHTML = 'Sold to <b>' + team.name + '</b>';
+  } else {
+    statusEl.classList.remove('sold');
+    lineEl.innerHTML = 'Not yet sold';
+  }
+}
+
+function moveTo(delta){
+  currentIndex = Math.max(0, Math.min(PLAYERS.length - 1, currentIndex + delta));
+  renderPlayer();
+}
+document.addEventListener('keydown', (e)=>{
+  if(document.getElementById('page-auction').classList.contains('active')){
+    if(e.key === 'ArrowRight') moveTo(1);
+    if(e.key === 'ArrowLeft') moveTo(-1);
+  }
+});
+
+/* =====================================================================
+   PAGE 2 — OWNERS GRID
+   ===================================================================== */
+function renderOwners(){
+  const grid = document.getElementById('ownersGrid');
+  grid.innerHTML = '';
+  TEAMS.forEach(team=>{
+    const count = Object.values(assignments).filter(t=>t===team.id).length;
+    const card = document.createElement('div');
+    card.className = 'owner-card';
+    card.innerHTML = `
+      <div class="owner-photo">${team.ownerImg
+          ? `<img src="${team.ownerImg}">`
+          : `<div class="photo-ph">Image of owner</div>`}</div>
+      <p class="owner-team nametype">${team.name}</p>
+      <p class="owner-name">${team.owner}</p>
+      <p class="owner-count">${count} player${count===1?'':'s'} signed</p>
+    `;
+    card.addEventListener('click', ()=>openRoster(team.id));
+    grid.appendChild(card);
+  });
+}
+
+/* =====================================================================
+   PAGE 3 — TEAM ROSTER
+   ===================================================================== */
+function openRoster(teamId){
+  const team = TEAMS.find(t=>t.id===teamId);
+  document.getElementById('rosterTeamName').textContent = team.name;
+  document.getElementById('rosterOwnerName').textContent = team.owner;
+  document.getElementById('rosterOwnerSub').textContent = 'Team Owner';
+  document.getElementById('rosterOwnerPhoto').innerHTML = team.ownerImg
+      ? `<img src="${team.ownerImg}">`
+      : `<div class="photo-ph">Owner</div>`;
+
+  const squad = PLAYERS.filter(p => assignments[p.id] === teamId);
+  const grid = document.getElementById('rosterGrid');
+  grid.innerHTML = '';
+  if(squad.length === 0){
+    grid.innerHTML = '<div class="roster-empty">No players signed to this team yet.</div>';
+  } else {
+    squad.forEach(p=>{
+      const card = document.createElement('div');
+      card.className = 'roster-player';
+      card.innerHTML = `
+        <div class="photo-wrap">${p.img
+            ? `<img src="${p.img}">`
+            : `<div class="photo-ph">Image</div>`}</div>
+        <div class="info">
+          <p class="rp-name nametype">${p.name}</p>
+          <p class="rp-role">${p.role}</p>
+        </div>`;
+      grid.appendChild(card);
+    });
+  }
+  goTo('roster');
+}
+
+/* =====================================================================
+   CROP TOOL (page 1 only — remove the "crop-btn" element / this block
+   once all 96 photos are placed correctly)
+   ===================================================================== */
+const cropOverlay = document.getElementById('cropOverlay');
+const cropStage   = document.getElementById('cropStage');
+const cropImg     = document.getElementById('cropImg');
+const cropZoom    = document.getElementById('cropZoom');
+
+document.getElementById('cropBtn').addEventListener('click', ()=>{
+  const player = PLAYERS[currentIndex];
+  if(!player.img){
+    alert('This player has no photo yet. Set player.img to a URL or base64 string first, then crop.');
+    return;
+  }
+  cropTargetPlayerId = player.id;
+  cropImg.src = player.img;
+  cropState = { scale:1, x:0, y:0, dragging:false, startX:0, startY:0 };
+  cropZoom.value = 100;
+  cropOverlay.classList.add('active');
+  cropImg.onload = positionCropImg;
+});
+
+function positionCropImg(){
+  const stageW = cropStage.clientWidth, stageH = cropStage.clientHeight;
+  const iw = cropImg.naturalWidth, ih = cropImg.naturalHeight;
+  const coverScale = Math.max(stageW/iw, stageH/ih);
+  cropState.baseScale = coverScale;
+  cropState.x = (stageW - iw*coverScale)/2;
+  cropState.y = (stageH - ih*coverScale)/2;
+  applyCropTransform();
+}
+function applyCropTransform(){
+  const total = cropState.baseScale * cropState.scale;
+  cropImg.style.width = (cropImg.naturalWidth*total)+'px';
+  cropImg.style.height = (cropImg.naturalHeight*total)+'px';
+  cropImg.style.transform = `translate(${cropState.x}px, ${cropState.y}px)`;
+}
+cropZoom.addEventListener('input', ()=>{
+  cropState.scale = cropZoom.value/100;
+  applyCropTransform();
+});
+cropStage.addEventListener('pointerdown', (e)=>{
+  cropState.dragging = true;
+  cropState.startX = e.clientX - cropState.x;
+  cropState.startY = e.clientY - cropState.y;
+});
+window.addEventListener('pointermove', (e)=>{
+  if(!cropState.dragging) return;
+  cropState.x = e.clientX - cropState.startX;
+  cropState.y = e.clientY - cropState.startY;
+  applyCropTransform();
+});
+window.addEventListener('pointerup', ()=> cropState.dragging = false);
+
+document.getElementById('cropCancel').addEventListener('click', ()=>{
+  cropOverlay.classList.remove('active');
+});
+document.getElementById('cropSave').addEventListener('click', ()=>{
+  const stageW = cropStage.clientWidth, stageH = cropStage.clientHeight;
+  const total = cropState.baseScale * cropState.scale;
+  const canvas = document.createElement('canvas');
+  const outSize = 500;
+  canvas.width = outSize; canvas.height = outSize;
+  const ctx = canvas.getContext('2d');
+  // source rect in natural image pixels corresponding to the visible stage
+  const sx = (0 - cropState.x) / total;
+  const sy = (0 - cropState.y) / total;
+  const sw = stageW / total;
+  const sh = stageH / total;
+  ctx.drawImage(cropImg, sx, sy, sw, sh, 0, 0, outSize, outSize);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+  const player = PLAYERS.find(p=>p.id===cropTargetPlayerId);
+  if(player) player.img = dataUrl;
+
+  cropOverlay.classList.remove('active');
+  renderPlayer();
+});
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+renderTeamGrid();
+renderPlayer();
+renderOwners();
+</script>
+</body>
+</html>
